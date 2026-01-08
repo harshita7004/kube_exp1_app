@@ -17,18 +17,22 @@ jobs:
         run: docker build -t myapp:${{ github.sha }} .
 
       - name: Login to Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-      - name: Push Docker image
         run: |
-          docker tag myapp:${{ github.sha }} <YOUR_DOCKERHUB_USERNAME>/myapp:${{ github.sha }}
-          docker push <YOUR_DOCKERHUB_USERNAME>/myapp:${{ github.sha }}
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login \
+          -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Tag & Push Docker image
+        run: |
+          docker tag myapp:${{ github.sha }} \
+          ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ github.sha }}
+          docker push \
+          ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ github.sha }}
 
       - name: Update Kubernetes manifest
         run: |
-          sed -i "s|image:.*|image: <YOUR_DOCKERHUB_USERNAME>/myapp:${{ github.sha }}|" k8s/deployment.yaml
+          sed -i "s|image:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ github.sha }}|" k8s/deployment.yaml
           git config --global user.name "github-actions[bot]"
           git config --global user.email "actions@github.com"
           git add k8s/deployment.yaml
-          git commit -m "chore: update image ${{ github.sha }}"
+          git commit -m "chore: update image to ${{ github.sha }}"
           git push
